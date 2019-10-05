@@ -1,0 +1,44 @@
+
+service: sqs-lambda-dynamo-poc
+
+provider:
+  name: aws
+  runtime: java8
+  stage: ${opt:stage, 'dev'}
+  region: ${opt:region, 'us-east-1'}
+  profile: ${opt:profile, 'default'}
+  iamRoleStatements:
+    - Effect: "Allow"
+      Action:
+        - "dynamodb:PutItem"
+        - "dynamodb:DeleteItem"
+        - "dynamodb:GetItem"
+        - "dynamodb:Query"
+        - "dynamodb:UpdateItem"
+        - "dynamodb:ListStreams"
+        - "dynamodb:GetRecords"
+      Resource: "*"
+  environment:
+    STAGE: ${self:provider.stage}
+
+package:
+  artifact: build/distributions/${self:service}-1.0-SNATPSHOT.zip
+
+custom:
+  accountID:
+    Ref: "AWS::AccountId"
+
+functions:
+  sqsConsumer:
+    name: ${self:provider.stage}-${self:service}
+    handler: com.swacorp.handler.Handler
+
+    events:
+      - sqs:
+          arn:
+            Fn::Join:
+               - ""
+               - - "arn:aws:sqs:"
+                 - "${self:provider.region}:"
+                 - Ref: AWS::AccountId
+                 - ":"
